@@ -228,16 +228,6 @@ The code follows Python best practices:
 - Proper error handling
 - Environment-based configuration
 - Clean separation of concerns
-
-## License
-
-This project was created as part of a technical assessment for Woyage AI.
-
-## Contact
-
-For questions or support, please contact: support@woyage.ai
-
 ---
 
 **Submitted by:** Surya
-**Repository:** https://github.com/SuryaCS719/woyageAI_AI-Engineer_Exercise
