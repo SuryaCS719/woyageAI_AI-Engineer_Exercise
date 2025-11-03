@@ -109,7 +109,8 @@ Generate a follow-up question based on interview context.
   "result": "success",
   "message": "Follow-up question generated.",
   "data": {
-    "followup_question": "Looking back, what would you change about your triage approach?"
+    "followup_question": "Looking back, what would you change about your triage approach?",
+    "rationale": "This question helps assess the candidate's ability to reflect critically on their decisions and identify areas for improvement."
   }
 }
 ```

@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, validator
 from openai import OpenAI, OpenAIError
 from typing import Optional
 import os
+import json
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -44,6 +45,7 @@ class InterviewRequest(BaseModel):
 class FollowUpData(BaseModel):
     """Data model for follow-up question."""
     followup_question: str
+    rationale: str
 
 
 class InterviewResponse(BaseModel):
@@ -77,7 +79,11 @@ Safety rails:
 - Focus on behavioral patterns, decision-making, problem-solving, and technical skills
 
 Output format:
-Return ONLY the follow-up question text, nothing else. No explanations, no rationale, just the question."""
+Return a JSON object with two fields:
+{
+  "question": "the follow-up question text",
+  "rationale": "a brief 1-2 sentence explanation of why this question is valuable"
+}"""
 
 
 def create_user_prompt(request: InterviewRequest) -> str:
@@ -152,27 +158,46 @@ async def generate_followup_questions(request: InterviewRequest):
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.7,
-            max_tokens=150,
+            max_tokens=200,
             top_p=1.0,
             frequency_penalty=0.3,
-            presence_penalty=0.3
+            presence_penalty=0.3,
+            response_format={"type": "json_object"}
         )
 
-        # Extract the generated follow-up question
-        followup_question = response.choices[0].message.content.strip()
+        # Extract and parse the generated response
+        response_content = response.choices[0].message.content.strip()
 
-        # Validate we got a meaningful response
-        if not followup_question:
+        # Validate we got a response
+        if not response_content:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to generate follow-up question"
+            )
+
+        # Parse JSON response
+        try:
+            parsed_response = json.loads(response_content)
+            followup_question = parsed_response.get("question", "").strip()
+            rationale = parsed_response.get("rationale", "").strip()
+
+            if not followup_question or not rationale:
+                raise ValueError("Missing question or rationale in response")
+
+        except (json.JSONDecodeError, ValueError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to parse OpenAI response: {str(e)}"
             )
 
         # Return successful response
         return InterviewResponse(
             result="success",
             message="Follow-up question generated.",
-            data=FollowUpData(followup_question=followup_question)
+            data=FollowUpData(
+                followup_question=followup_question,
+                rationale=rationale
+            )
         )
 
     except OpenAIError as e:
